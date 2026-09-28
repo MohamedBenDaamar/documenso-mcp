@@ -1,0 +1,30 @@
+{
+  "name": "documenso-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Team-scoped MCP server for Documenso envelopes, built with mcp-use",
+  "author": "Mohamed Ben Daamar",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "scripts": {
+    "dev": "mcp-use dev --port 3100",
+    "build": "mcp-use build",
+    "start": "mcp-use start",
+    "typecheck": "mcp-use typecheck",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "mcp-use": "2.7.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@mcp-use/client": "2.3.3",
+    "@types/node": "22.20.4",
+    "typescript": "7.0.2",
+    "vitest": "5.0.2"
+  }
+}
