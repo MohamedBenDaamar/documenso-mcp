@@ -1,5 +1,7 @@
 # Testing in Claude and ChatGPT
 
+> **These results are from v0.2.0**, which signed users in through Supabase and a pasted Documenso API token. v0.3.0 replaced that with Documenso OAuth ([ADR 0002](adr/0002-documenso-oauth.md)). The new flow is verified end to end by `scripts/check-oauth-flow.ts`; the hosts will be tested again once Documenso runs at a stable public URL. The tools, their output and the View did not change.
+
 Tested 2026-09-29 against the deployed server `https://keen-wave-4xpwv.run.mcp-use.com/mcp`, commit `ed6d5aa`.
 
 - **Users:** the Team A test user, signed in through the server's consent page (Supabase OAuth with dynamic client registration). Each host registered its own OAuth client.

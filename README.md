@@ -1,26 +1,31 @@
 # documenso-mcp
 
-A team-scoped [MCP](https://modelcontextprotocol.io) server for [Documenso](https://github.com/documenso/documenso), built with [mcp-use](https://docs.mcp-use.com). It lets ChatGPT and Claude list, inspect, prepare and send Documenso envelopes for the caller's own team.
+A team-scoped [MCP](https://modelcontextprotocol.io) server for [Documenso](https://github.com/documenso/documenso), built with [mcp-use](https://docs.mcp-use.com). It lets ChatGPT and Claude list and inspect Documenso documents for a team the user chose, and will prepare and send them.
 
-> **Status:** the read-only tools, per-user sign-in and the signing-status View are deployed on Manufact and tested in **Claude and ChatGPT**. Drafting and sending are next. This is an independent project, not an official Documenso integration. See [ADR 0001](docs/adr/0001-external-adapter.md) for why it is a separate adapter.
+Users connect in one click: the assistant opens Documenso, the user signs in, picks a team and approves. No API token to copy, no second account. That works because Documenso itself is the OAuth server, through an [OAuth 2.1 authorization server I added in a fork of Documenso](https://github.com/MohamedBenDaamar/documenso/blob/feat/oauth-server/OAUTH.md).
 
-## Tested in Claude and ChatGPT
+> **Status (v0.3.0):** read-only tools and the signing-status View, with Documenso OAuth. The whole sign-in path is verified end to end by [`scripts/check-oauth-flow.ts`](scripts/check-oauth-flow.ts) (20 checks). The last host tests in Claude and ChatGPT were on v0.2.0, which used a different sign-in; the next step is a stable deployment so both can be tested again. Drafting and sending come after. This is an independent project, not an official Documenso integration.
 
-The same deployed server (`https://keen-wave-4xpwv.run.mcp-use.com/mcp`), with real OAuth sessions. Each host lists only the signed-in user's team documents, renders the signing-status View, and is refused another team's envelope. Details, the server log and all screenshots: [docs/host-testing.md](docs/host-testing.md).
+## Connecting
 
-| Claude | ChatGPT |
+| 1. Documenso's consent page | 2. Revoke any time in Documenso |
 |---|---|
-| ![Signing-status View in Claude](docs/images/claude-signing-status-view.png) | ![Signing-status View in ChatGPT](docs/images/chatgpt-signing-status-view.png) |
+| ![Documenso consent page](docs/images/documenso-consent-page.png) | ![Connected apps in Documenso settings](docs/images/documenso-connected-apps.png) |
+
+1. Add the server as a connector in Claude or ChatGPT (`https://<your-server>/mcp`).
+2. The host discovers Documenso from this server's metadata, registers itself, and opens Documenso.
+3. Sign in to Documenso, choose the team, check the permissions, and click **Allow access**.
+4. Ask for your documents. The assistant only ever sees the team you chose.
 
 ## Tools
 
 | Tool | Sign-in | Behavior |
 |---|---|---|
 | `documenso-health` | Not required | Server version and Documenso reachability. No team data. |
-| `list-envelopes` | Required | The caller's team documents, filterable by status and text, paginated. |
-| `get-envelope-status` | Required | Signing progress of one envelope, with an interactive [signing-status View](#signing-status-view). Recipient emails are masked. |
-| `list-templates` | Required | Team templates and the recipient roles each expects. |
-| `prepare-from-template`, `preview-distribution`, `distribute-envelope` | Planned | Draft first; sending requires an explicit, single-use confirmation. |
+| `list-envelopes` | `envelopes:read` | The team's documents, filterable by status and text, paginated. |
+| `get-envelope-status` | `envelopes:read` | Signing progress of one envelope, with an interactive [signing-status View](#signing-status-view). Recipient emails are masked. |
+| `list-templates` | `envelopes:read` | Team templates and the recipient roles each expects. |
+| `prepare-from-template`, `preview-distribution`, `distribute-envelope` | Planned: `envelopes:write`, `envelopes:send` | Draft first; sending will need the send scope, approved separately, plus a single-use confirmation. |
 
 ## Signing-status View
 
@@ -32,49 +37,64 @@ The View loads no external scripts, fonts, images or APIs, so it declares no ext
 
 ## How access works
 
-Users sign in through Supabase (OAuth 2.1 with dynamic client registration), then link **their own** Documenso team API token on the consent page. The token is checked with Documenso, encrypted with AES-256-GCM and stored in a Supabase table that row level security limits to its owner. Every Documenso call uses the caller's own token, so Documenso's team boundaries apply. There is no shared token and no Supabase admin key on the server. Details: [docs/auth.md](docs/auth.md).
+- **Documenso is the authorization server.** This server's protected resource metadata points MCP clients at Documenso, which handles registration, sign-in, consent and tokens ([ADR 0002](docs/adr/0002-documenso-oauth.md)).
+- **Every token is checked with Documenso** before any tool code runs: it must be active and issued for this server (`aud`), otherwise the request gets HTTP 401. Results are cached for 30 seconds at most.
+- **Documenso enforces the rest** on every API call: the team chosen at consent, the approved scopes, and the user's role in that team.
+- **This server stores nothing.** No tokens, no database, no encryption keys.
+
+Details, including revocation and known limitations: [docs/auth.md](docs/auth.md).
 
 ## Run locally
 
-Requirements: Node 24, a Documenso instance ([docs/local-backend.md](docs/local-backend.md)) and a Supabase project.
+Requirements: Node 24 and the [Documenso fork](https://github.com/MohamedBenDaamar/documenso) running locally ([docs/local-backend.md](docs/local-backend.md)).
 
-1. In Supabase, enable **Authentication → OAuth Server** with dynamic client registration, set the **Authorization Path** to `/auth/consent` and the **Site URL** to `http://localhost:3100`.
-2. Run [`supabase/migrations/20260929000000_documenso_connections.sql`](supabase/migrations/20260929000000_documenso_connections.sql) in the Supabase SQL editor.
-3. Configure and start:
+1. In Documenso's `.env`, allow this server as an OAuth resource and restart Documenso:
 
-```bash
-npm ci
-cp .env.example .env
-npm run dev
-```
+   ```bash
+   NEXT_PRIVATE_OAUTH_RESOURCES="http://localhost:3100/mcp"
+   ```
 
-Fill in `.env` from [.env.example](.env.example). `CONNECTION_ENCRYPTION_KEY` is 32 random bytes in base64.
+2. Start this server:
+
+   ```bash
+   npm ci
+   cp .env.example .env    # DOCUMENSO_URL=http://localhost:3000
+   npm run dev
+   ```
 
 - MCP endpoint: http://localhost:3100/mcp
-- Account page: http://localhost:3100/auth/account
 - Inspector: http://localhost:3100/mcp/inspector
 
 ## Checks
 
 ```bash
 npm run typecheck
-npm test
-./scripts/check-team-isolation.sh
-./scripts/check-auth-wiring.sh
+npm test                  # 62 unit tests
+npm run build             # server and View bundles
+
+./scripts/check-auth-wiring.sh http://localhost:3100
+node --env-file=.env.test.local scripts/check-oauth-flow.ts http://localhost:3100
 ```
 
-- `check-team-isolation.sh` checks Documenso's own team boundaries with two team API tokens.
-- `check-auth-wiring.sh` checks the running server's sign-in boundary over HTTP: public health tool, 401 for Documenso tools without a valid token, cross-site form posts blocked. Pass a URL to check a deployment.
+- `check-auth-wiring.sh` needs no credentials. It checks the metadata, that signed-out clients can list tools and call `documenso-health`, and that every Documenso tool answers HTTP 401 with a challenge for missing, forged or wrong-kind tokens.
+- `check-oauth-flow.ts` runs the real flow with two ordinary Documenso accounts ([`.env.test.example`](.env.test.example)): discovery, registration, sign-in, consent, token exchange, every tool, team isolation between the two users, a token without the read scope (403), forged tokens (401), and revocation.
+- CI runs typecheck, tests and the build on every pull request.
 
 Deployment: [docs/deploy.md](docs/deploy.md).
 
 ## Security notes
 
+- Tokens that are not Documenso access tokens are refused before any network call; Documenso refresh tokens and API tokens are not accepted as access tokens.
+- If Documenso cannot confirm a token, the request fails closed and nothing is cached.
 - Documenso error bodies, which include stack traces and server paths in development, are never forwarded to the model (`src/documenso/errors.ts`).
 - Documenso returns each recipient's signing token in envelope responses. Tools output only allowlisted fields, so signing tokens never reach the model ([docs/api-map.md](docs/api-map.md)).
 - Redirects from Documenso are refused, so a token is never sent to another host.
-- Consent and account pages: HttpOnly SameSite=Lax session cookie, an Origin check on every form post (with a `Sec-Fetch-Site: same-origin` fallback when a browser withholds Origin), strict CSP with `frame-ancestors 'none'`, and a fixed allowlist for post-login redirects.
+
+## History
+
+- **v0.3.0:** Documenso OAuth; Supabase sign-in and token linking removed ([ADR 0002](docs/adr/0002-documenso-oauth.md)).
+- **[v0.2.0](https://github.com/MohamedBenDaamar/documenso-mcp/tree/v0.2.0):** Supabase sign-in, then pasting a Documenso team API token; tested in Claude and ChatGPT ([docs/host-testing.md](docs/host-testing.md)).
 
 ## License
 
-MIT
+MIT. The Documenso fork it works with is AGPL-3.0; this server only talks to it over HTTP.

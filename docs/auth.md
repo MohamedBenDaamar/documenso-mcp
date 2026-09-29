@@ -1,25 +1,31 @@
 # Authentication and team authorization
 
+Documenso is this server's OAuth authorization server. Users connect by signing in to Documenso and approving access for one team; this server never sees a password or stores a token. Why this design: [ADR 0002](adr/0002-documenso-oauth.md). The Documenso side: [OAUTH.md in the fork](https://github.com/MohamedBenDaamar/documenso/blob/feat/oauth-server/OAUTH.md).
+
 ## Flow
 
 ```mermaid
 sequenceDiagram
+    participant U as User (browser)
     participant H as ChatGPT / Claude
     participant M as documenso-mcp
-    participant S as Supabase Auth
-    participant D as Documenso
+    participant D as Documenso (fork)
 
     H->>M: tools/call list-envelopes (no token)
-    M-->>H: 401 + WWW-Authenticate (resource metadata)
-    H->>S: register client (DCR), authorize with PKCE
-    S->>M: browser: /auth/consent?authorization_id=...
-    Note over M: sign in, paste Documenso team API token,<br/>token checked with Documenso, encrypted, stored
-    M->>S: approve authorization
-    S-->>H: authorization code, then access token (aud "authenticated")
-    H->>M: tools/call list-envelopes (Bearer Supabase token)
-    M->>S: read own row from documenso_connections (same token, RLS)
-    M->>D: GET /api/v2/envelope (the user's own team token)
-    D-->>M: team-scoped envelopes
+    M-->>H: 401 + WWW-Authenticate: resource_metadata=...
+    H->>M: GET /.well-known/oauth-protected-resource/mcp
+    M-->>H: authorization_servers: [Documenso], scopes: envelopes:read
+    H->>D: GET /.well-known/oauth-authorization-server
+    H->>D: POST /api/oauth/register (dynamic client registration)
+    H->>U: open /api/oauth/authorize (PKCE, resource = this server)
+    U->>D: sign in, choose a team, Allow
+    D-->>H: authorization code (via the browser)
+    H->>D: POST /api/oauth/token (code + verifier)
+    D-->>H: access token (1 hour) + rotating refresh token
+    H->>M: tools/call list-envelopes (Bearer doa_...)
+    M->>D: GET /api/oauth/tokeninfo (active? aud = this server?)
+    M->>D: GET /api/v2/envelope (same token)
+    D-->>M: the chosen team's envelopes only
     M-->>H: allowlisted fields only
 ```
 
@@ -27,25 +33,33 @@ sequenceDiagram
 
 | Boundary | Enforced by |
 |---|---|
-| Caller identity | mcp-use `oauthSupabaseProvider` verifies the ES256 signature (project JWKS), issuer, audience `authenticated`, expiry and resource binding before any tool code runs. The session check then confirms with Supabase that the session was not revoked. |
-| Which Documenso token is used | The token row is read with the caller's own Supabase access token. Row level security (`auth.uid() = user_id`) returns only that user's row. The server has no Supabase key that bypasses RLS. |
-| Stored token confidentiality | AES-256-GCM with a server-held key (`CONNECTION_ENCRYPTION_KEY`). The user ID is authenticated data, so a ciphertext moved to another row does not decrypt. Supabase never sees the plaintext. |
-| Which envelopes a token can see | Documenso itself: tokens are bound to one team, and membership and role visibility are checked on every request (see [api-map.md](api-map.md)). |
+| Caller identity | Documenso: the user signs in on Documenso's own pages, and the token is issued to that user. |
+| Token validity | `src/auth/documenso-oauth.ts` asks Documenso's `tokeninfo` endpoint before any tool code runs. Inactive, expired, revoked or malformed tokens get HTTP 401 with a `WWW-Authenticate` challenge, so clients sign the user in again. Anything that is not a Documenso access token (`doa_…`) is refused without a network call. |
+| Audience | The same check requires `aud` to equal this server's resource URL. A token the user granted to another MCP server that trusts the same Documenso is refused. |
+| Scope | mcp-use requires `envelopes:read` for every Documenso tool. Documenso checks scopes again on every API call; write and send tools will declare `envelopes:write` and `envelopes:send`. |
+| Which team | Documenso: the team is fixed when the user approves, and the API ignores any team header for these tokens. |
+| Which envelopes | Documenso: team membership and role-based visibility are checked on every request (see [api-map.md](api-map.md)). |
 | What reaches the model | Allowlist schemas plus field-by-field output. Recipient signing tokens, owner details, form values and messages are dropped; recipient emails are masked. |
+| Token storage | None. The bearer token is used for the duration of the request; the verification cache is keyed by a SHA-256 hash of the token and holds no token. |
+
+## Caching and failure
+
+- Verification results are cached for 30 seconds per token, and never past the token's expiry.
+- If Documenso cannot answer (network error or 5xx), the request fails closed and nothing is cached.
+- Documenso's error bodies, which include stack traces in development, are never forwarded (`src/documenso/errors.ts`).
 
 ## Revocation
 
-- **Disconnect team** on `/auth/account` deletes the stored token row.
-- **Revoke access** on `/auth/account` revokes the application's Supabase OAuth grant, which deletes its sessions and refresh tokens.
-  - Supabase access tokens are signed JWTs, so signature checks alone keep accepting them until they expire (up to an hour). Tested: after a revoke, the old token still reached tool code.
-  - `src/auth/session-check.ts` wraps the Supabase provider. After the signature check, it asks Supabase `GET /auth/v1/user`, which answers 403 `session_not_found` for a revoked session, and rejects the token as `invalid_token` (HTTP 401 with a `WWW-Authenticate` challenge).
-  - Results are cached for 30 seconds per token hash, so a revoke takes effect within 30 seconds. If Supabase is unreachable the request fails closed.
-- Revoking the token in Documenso, or removing the user from the team, makes the next tool call fail with a "reconnect" message, because Documenso rejects the token.
+| How | Effect here |
+|---|---|
+| Documenso **Settings → Security → Connected apps → Revoke** | Documenso refuses the token at once, so tool calls fail with a "reconnect" message; within 30 seconds this server also answers 401. |
+| The host revokes the token (`/api/oauth/revoke`) | Same. |
+| The user leaves the team, or is removed | Same: Documenso checks membership on every call. |
+| A refresh token is used twice | Documenso treats it as leaked and revokes the whole grant. |
 
 ## Known limitations
 
-- **No per-tool OAuth scopes.** Supabase's OAuth server only issues `openid`, `profile`, `email`, `phone` and `offline_access`. Write tools (a later PR) are protected by server-side, single-use confirmation tokens instead of OAuth scopes.
-- **One Documenso team per user.** The table key is the user ID.
-- **The token's permissions are the Documenso user's.** A token created by a team admin carries that admin's visibility. Documenso only lets admins and managers create tokens.
-- **Forged tokens without `kid` get HTTP 500, not 401 (mcp-use 2.7.0 and 2.7.1; still in 2.7.2-canary.7).** During Supabase key rotation the JWKS has two ES256 keys. A token with no `kid` then makes `jose` throw `JWKSMultipleMatchingKeys`, which mcp-use's `isCredentialFailure` does not list. The request still fails closed, so no tool code runs. `scripts/check-auth-wiring.sh` reports it as `WARN`. Genuine Supabase tokens always carry `kid`.
-- The consent page uses email and password sign-in through Supabase. Test users are created in the Supabase dashboard with **Auto Confirm User**.
+- **Documenso's API does not check `aud` itself.** A token issued for this server also works directly against Documenso's API, within its scopes. The audience check protects MCP servers from each other, not Documenso from its own tokens.
+- **One team per connection.** To use a second team, connect again and choose it.
+- **Up to 30 seconds** can pass before this server itself stops accepting a revoked token. Documenso refuses it immediately, so no data is returned in the meantime.
+- **Requires the Documenso fork.** Stock Documenso has no OAuth server; see ADR 0002.
