@@ -137,6 +137,20 @@ describe("get-envelope-status", () => {
     }
   });
 
+  it("masks recipient names that are email addresses (found testing the View in ChatGPT)", async () => {
+    const fixture = envelopeFixture();
+    fixture.recipients[1] = { ...fixture.recipients[1], name: "second.signer@example.com" };
+    const documenso = fakeDocumenso(() => fixture);
+
+    const result = await getEnvelopeStatus(depsWith(documenso), TOKEN_A, { envelopeId: "envelope_nuwxdimowvbthehz" });
+
+    if (result.isError) {
+      throw new Error("expected success");
+    }
+    expect(result.structuredContent.recipients[1]).toMatchObject({ name: "se***@example.com", email: "se***@example.com" });
+    expect(everything(result)).not.toContain("second.signer@example.com");
+  });
+
   it("reports a signing time only for recipients who have signed", async () => {
     const fixture = envelopeFixture();
     fixture.recipients[1] = { ...fixture.recipients[1], signedAt: "2026-09-28T20:48:19.626Z" };

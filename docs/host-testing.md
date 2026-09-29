@@ -2,8 +2,28 @@
 
 | Version | Sign-in | Hosts tested |
 |---|---|---|
-| **v0.3.0** | Documenso OAuth ([ADR 0002](adr/0002-documenso-oauth.md)) | [Live deployment](#v030-live-deployment) (scripted checks and the Inspector); [Claude Code](#v030-claude-code-local) and the [mcp-use Inspector](#v030-mcp-use-inspector-local) against a local stack. |
+| **v0.3.0** | Documenso OAuth ([ADR 0002](adr/0002-documenso-oauth.md)) | [ChatGPT](#v030-chatgpt-live) and the [live deployment](#v030-live-deployment) (scripted checks and the Inspector); [Claude Code](#v030-claude-code-local) and the [mcp-use Inspector](#v030-mcp-use-inspector-local) against a local stack. |
 | v0.2.0 | Supabase plus a pasted Documenso API token | [Claude and ChatGPT](#v020-claude-and-chatgpt-deployed), against the Manufact deployment |
+
+## v0.3.0: ChatGPT (live)
+
+Tested 2026-09-29 against `https://documenso-mcp.unheld.io/mcp`, as a developer-mode plugin with OAuth. ChatGPT registered itself with Documenso, and sign-in and consent happened on `documenso.unheld.io` as demo user Alex Martin (team Acme Legal).
+
+| 1. Documenso's consent page | 2. `List my Documenso documents` |
+|---|---|
+| ![Documenso asks to connect ChatGPT for the Acme Legal team, read access only](images/chatgpt-v3-consent.png) | ![ChatGPT lists the team's three documents](images/chatgpt-v3-list-envelopes.png) |
+
+`Show the signing status of envelope_fkkzianysanukhmi`, a document of the other demo team, is refused with the same message as a missing envelope:
+
+![ChatGPT is refused the other team's envelope](images/chatgpt-v3-cross-team-denied.png)
+
+### What this test found
+
+The signing-status View rendered in ChatGPT, and it showed each recipient's email in full on the name line, above the masked email:
+
+![Before the fix: the recipient name line shows the full email address](images/chatgpt-v3-view-before-fix.png)
+
+The demo recipients' names were their email addresses (Documenso's seed data sets them that way), and names were passed through unmasked. People can type an email into the name field too, so this was a real gap. `get-envelope-status` and `list-templates` now mask any email address inside a name or role label, with tests (`test/masking.test.ts`). The demo recipients also got real names.
 
 ## v0.3.0: live deployment
 

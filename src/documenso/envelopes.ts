@@ -52,6 +52,16 @@ export function maskEmail(email: string): string {
   return `${email.slice(0, Math.min(2, at))}***${email.slice(at)}`;
 }
 
+const EMAIL_IN_TEXT = /[^\s@<>()[\]"',;:]+@[^\s@<>()[\]"',;:]+\.[^\s@<>()[\]"',;:]+/g;
+
+/**
+ * Masks every email address inside free text. Recipient names are typed by people, and a name is often
+ * just the email address again (Documenso's seed data does this), which would undo `maskEmail`.
+ */
+export function maskEmailsIn(text: string): string {
+  return text.replace(EMAIL_IN_TEXT, (email) => maskEmail(email));
+}
+
 /** Recipients who must act. CC recipients only receive a copy. */
 export function actingRecipients(recipients: Recipient[]): Recipient[] {
   return recipients.filter((recipient) => recipient.role !== "CC");
