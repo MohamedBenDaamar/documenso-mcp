@@ -44,6 +44,14 @@ Two consequences for the MCP server:
 - **Status codes are inconsistent.** A cross-team distribute is refused with **HTTP 500** `Document not found`: `sendDocument` throws a plain `Error`, not an `AppError`. The MCP server must not treat 500 as "retry". It maps it to a safe "not found or not allowed" error.
 - **Error bodies include stack traces and absolute server paths** in dev mode. The MCP server never forwards Documenso's raw error bodies to the model. It returns its own short error messages.
 
+## Sensitive fields in envelope responses
+
+`GET /envelope` and `GET /envelope/{id}` return, for each recipient, a `token` field (for example `SC_48aooSk2z-...`). This is the recipient's **signing token**: anyone who has it can open that recipient's signing link. The responses also include the owner's `user` object (name and email), `authOptions`, `formValues` (pre-filled field values) and `documentMeta` (email subject and message).
+
+The MCP server parses responses with allowlist schemas (`src/documenso/envelopes.ts`), and each tool builds its output field by field (`src/tools/envelopes.ts`), so none of these fields can reach the model. `test/envelope-tools.test.ts` uses a fixture with all of them and asserts they are absent.
+
+There is no endpoint that identifies the team behind a token (no `/me` or `/team`). The server checks a token when it is linked with `GET /envelope?perPage=1` and stores only the encrypted token and its last four characters.
+
 ## Send semantics (`sendDocument`)
 
 Source: `packages/lib/server-only/document/send-document.ts`.
