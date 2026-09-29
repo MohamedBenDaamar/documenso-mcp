@@ -73,7 +73,10 @@ export function createSupabaseConnectionStore({ supabaseUrl, publishableKey, cip
       try {
         token = cipher.decrypt(data.token_ciphertext, user.id);
       } catch {
-        throw new ConnectionStoreError();
+        // Encrypted with another key (for example a different environment) or tampered with. Never use it,
+        // and treat the user as not connected so linking a token again overwrites the row.
+        console.warn(JSON.stringify({ event: "connection_undecryptable" }));
+        return null;
       }
 
       return { token, tokenHint: data.token_hint, verifiedAt: data.verified_at };

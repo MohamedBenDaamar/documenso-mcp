@@ -50,6 +50,16 @@ describe("loadConfig", () => {
     );
   });
 
+  it("requires a public https MCP_URL in production", () => {
+    expect(() => loadConfig({ ...BASE_ENV, NODE_ENV: "production" })).toThrow("MCP_URL");
+    expect(() => loadConfig({ ...BASE_ENV, NODE_ENV: "production", MCP_URL: "http://mcp.example.com" })).toThrow(
+      "MCP_URL",
+    );
+    expect(loadConfig({ ...BASE_ENV, NODE_ENV: "production", MCP_URL: "https://mcp.example.com" }).publicUrl).toBe(
+      "https://mcp.example.com",
+    );
+  });
+
   it("rejects an out-of-range timeout", () => {
     expect(() => loadConfig({ ...BASE_ENV, DOCUMENSO_TIMEOUT_MS: "5" })).toThrow("DOCUMENSO_TIMEOUT_MS");
   });
