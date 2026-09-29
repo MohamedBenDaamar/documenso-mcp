@@ -5,6 +5,8 @@ Base URL: `<DOCUMENSO_URL>/api/v2`. Full spec: `GET /api/v2/openapi.json`.
 
 ## Authentication and team scope
 
+Since v0.3.0 this server calls the API with **Documenso OAuth access tokens** (`doa_…`) from the fork's authorization server, not API tokens. They behave like the team API tokens described below, with two differences: they can only call the endpoints their scopes allow (`envelope.find` and `envelope.get` for `envelopes:read`), and audit logs name the user who approved them. The fork also adds `GET /api/oauth/tokeninfo`, which identifies the user, team, scopes and audience of a token. See [auth.md](auth.md).
+
 - Header: `Authorization: Bearer api_xxx` (or the bare token).
 - An API token belongs to exactly one **team** and one **user**. The team comes from the token itself, not from a request header (`packages/trpc/server/trpc.ts`).
 - Token lookup rejects disabled users, disabled organisation owners, and expired tokens (`packages/lib/server-only/public-api/get-api-token-by-token.ts`).
@@ -29,7 +31,7 @@ Envelope IDs are prefixed strings (`envelope_…`, `packages/lib/universal/id.ts
 
 ## Observed team isolation (2026-09-28)
 
-Tested with `scripts/check-team-isolation.sh` against a local instance, using two teams, each with its own API token.
+Tested with API tokens against a local instance, using two teams, each with its own token. (That script was removed in v0.3.0; `scripts/check-oauth-flow.ts` now runs the list and cross-team checks through this server with OAuth tokens.)
 
 | Case | Result |
 |---|---|
@@ -50,7 +52,7 @@ Two consequences for the MCP server:
 
 The MCP server parses responses with allowlist schemas (`src/documenso/envelopes.ts`), and each tool builds its output field by field (`src/tools/envelopes.ts`), so none of these fields can reach the model. `test/envelope-tools.test.ts` uses a fixture with all of them and asserts they are absent.
 
-There is no endpoint that identifies the team behind a token (no `/me` or `/team`). The server checks a token when it is linked with `GET /envelope?perPage=1` and stores only the encrypted token and its last four characters.
+Upstream Documenso has no endpoint that identifies the team behind an API token (no `/me` or `/team`). The fork's `tokeninfo` endpoint does this for OAuth tokens.
 
 ## Send semantics (`sendDocument`)
 

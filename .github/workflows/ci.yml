@@ -21,3 +21,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      # Bundles the server and the signing-status View, which typecheck and tests do not exercise.
+      # The build loads index.ts, which validates the config; the URL is read again at startup, not bundled.
+      - run: npm run build
+        env:
+          DOCUMENSO_URL: https://documenso.invalid

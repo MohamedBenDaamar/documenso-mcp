@@ -1,6 +1,6 @@
 # ADR 0001: Build the MCP server as a separate adapter, not inside a Documenso fork
 
-**Status:** Accepted, 2026-09-28
+**Status:** Accepted, 2026-09-28. Authentication part superseded by [ADR 0002](0002-documenso-oauth.md) on 2026-09-29: Documenso (in a fork) is now the OAuth server, and the Supabase sign-in and token-linking described below were removed in v0.3.0. The rest of this decision still holds.
 
 ## Context
 
@@ -18,7 +18,7 @@ What we found in upstream Documenso (commit `a1d4bec`):
 Build `documenso-mcp` as a standalone TypeScript server using `mcp-use`, deployed on Manufact. It talks to Documenso **only** through `/api/v2`.
 
 - **MCP identity:** the MCP server has its own OAuth provider for sign-in. That login is *not* Documenso OAuth and is never presented as such.
-- **Linking to Documenso:** after signing in, a user links a Documenso **team API token** they created. It is stored encrypted and keyed by (MCP subject, team). Users can unlink it, and revoking the MCP grant deletes the stored token.
+- **Linking to Documenso:** after signing in, a user links a Documenso **team API token** they created. It is stored encrypted, one per MCP user. Users can unlink it separately from revoking the MCP grant. (As implemented in v0.2.0: the table was keyed by user only, and revoking the grant did not delete the stored token. An earlier version of this ADR said otherwise.)
 - **Authorization:** Documenso remains the source of truth. Every tool call uses the linked token of the calling user. We never use a shared or global token for multiple users, and we never forward an MCP access token to Documenso.
 - **Output:** results are kept minimal. Signing URLs, API tokens and PDF bytes never appear in model-visible content or logs.
 

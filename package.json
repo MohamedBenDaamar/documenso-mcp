@@ -1,6 +1,6 @@
 {
   "name": "documenso-mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Team-scoped MCP server for Documenso envelopes, built with mcp-use",
   "author": "Mohamed Ben Daamar",
@@ -18,7 +18,6 @@
     "check": "npm run typecheck && npm test"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.117.2",
     "mcp-use": "2.7.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",

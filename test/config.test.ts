@@ -1,63 +1,30 @@
-import { randomBytes } from "node:crypto";
-
 import { describe, expect, it } from "vitest";
 
 import { loadConfig } from "../src/config.js";
 
-const KEY = randomBytes(32).toString("base64");
-
-const BASE_ENV = {
-  DOCUMENSO_URL: "http://localhost:3000/",
-  SUPABASE_URL: "https://abcdefghijklmnopqrst.supabase.co",
-  SUPABASE_PUBLISHABLE_KEY: "sb_publishable_example",
-  CONNECTION_ENCRYPTION_KEY: KEY,
-};
+const BASE_ENV = { DOCUMENSO_URL: "http://localhost:3000/" };
 
 describe("loadConfig", () => {
   it("reads the environment, strips trailing slashes and applies defaults", () => {
-    expect(loadConfig(BASE_ENV)).toEqual({
-      documensoUrl: "http://localhost:3000",
-      documensoTimeoutMs: 10000,
-      publicUrl: "http://localhost:3100",
-      supabaseUrl: "https://abcdefghijklmnopqrst.supabase.co",
-      supabasePublishableKey: "sb_publishable_example",
-      connectionEncryptionKey: Buffer.from(KEY, "base64"),
-    });
-  });
-
-  it("uses MCP_URL as the public URL and derives the Supabase URL from a project ID", () => {
-    const config = loadConfig({
-      ...BASE_ENV,
-      SUPABASE_URL: "",
-      SUPABASE_PROJECT_ID: "zyxwvutsrqponmlkjihg",
-      MCP_URL: "https://mcp.example.com/",
-    });
-
-    expect(config.publicUrl).toBe("https://mcp.example.com");
-    expect(config.supabaseUrl).toBe("https://zyxwvutsrqponmlkjihg.supabase.co");
+    expect(loadConfig(BASE_ENV)).toEqual({ documensoUrl: "http://localhost:3000", documensoTimeoutMs: 10000 });
   });
 
   it("names invalid variables without echoing their values", () => {
     expect(() => loadConfig({})).toThrow("DOCUMENSO_URL");
-    expect(() => loadConfig({ ...BASE_ENV, DOCUMENSO_URL: "file:///etc/passwd" })).toThrow("DOCUMENSO_URL");
-    expect(() => loadConfig({ ...BASE_ENV, SUPABASE_URL: undefined })).toThrow("SUPABASE_URL");
-    expect(() => loadConfig({ ...BASE_ENV, SUPABASE_PUBLISHABLE_KEY: "sb_secret_abc" })).toThrow(
-      "SUPABASE_PUBLISHABLE_KEY",
-    );
-
-    expect(() => loadConfig({ ...BASE_ENV, CONNECTION_ENCRYPTION_KEY: "short-secret-value" })).toThrow(
-      /^Invalid configuration: CONNECTION_ENCRYPTION_KEY\. See \.env\.example\.$/,
+    expect(() => loadConfig({ DOCUMENSO_URL: "file:///etc/passwd" })).toThrow(
+      /^Invalid configuration: DOCUMENSO_URL\. See \.env\.example\.$/,
     );
   });
 
-  it("requires a public https MCP_URL in production", () => {
-    expect(() => loadConfig({ ...BASE_ENV, NODE_ENV: "production" })).toThrow("MCP_URL");
-    expect(() => loadConfig({ ...BASE_ENV, NODE_ENV: "production", MCP_URL: "http://mcp.example.com" })).toThrow(
-      "MCP_URL",
+  it("requires public https URLs in production", () => {
+    const production = { NODE_ENV: "production", DOCUMENSO_URL: "https://sign.example.com" };
+
+    expect(() => loadConfig(production)).toThrow("MCP_URL");
+    expect(() => loadConfig({ ...production, MCP_URL: "http://mcp.example.com" })).toThrow("MCP_URL");
+    expect(() => loadConfig({ ...production, MCP_URL: "https://mcp.example.com", DOCUMENSO_URL: "http://sign.example.com" })).toThrow(
+      "DOCUMENSO_URL",
     );
-    expect(loadConfig({ ...BASE_ENV, NODE_ENV: "production", MCP_URL: "https://mcp.example.com" }).publicUrl).toBe(
-      "https://mcp.example.com",
-    );
+    expect(loadConfig({ ...production, MCP_URL: "https://mcp.example.com" }).documensoUrl).toBe("https://sign.example.com");
   });
 
   it("rejects an out-of-range timeout", () => {

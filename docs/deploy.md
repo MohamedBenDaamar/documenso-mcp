@@ -1,57 +1,53 @@
-# Deploying to Manufact
+# Deploying
 
-The server is deployed from this GitHub repository with the Manufact GitHub App, which is installed on this repository only.
+Two things are deployed: this MCP server, and the [Documenso fork](https://github.com/MohamedBenDaamar/documenso) it uses as its authorization server. Each must know the other's public URL.
 
-- MCP endpoint: `https://keen-wave-4xpwv.run.mcp-use.com/mcp`
+| Side | Setting | Value |
+|---|---|---|
+| Documenso | `NEXT_PUBLIC_WEBAPP_URL` | Documenso's public https URL, e.g. `https://sign.example.com` |
+| Documenso | `NEXT_PRIVATE_OAUTH_RESOURCES` | This server's MCP endpoint, e.g. `https://mcp.example.com/mcp` |
+| MCP server | `DOCUMENSO_URL` | Exactly Documenso's `NEXT_PUBLIC_WEBAPP_URL` (it is the OAuth issuer) |
+| MCP server | `MCP_URL` | This server's public https origin, e.g. `https://mcp.example.com` |
+| MCP server | `DOCUMENSO_TIMEOUT_MS` | Optional, default `10000` |
+
+In production the server refuses to start unless both `MCP_URL` and `DOCUMENSO_URL` are `https://`.
+
+Documenso's URL must be **stable**. Users' browsers are sent to its sign-in and consent pages, and every registered client remembers its endpoints, so changing it disconnects everyone. A temporary tunnel URL is not enough for a demo that has to stay up.
+
+## MCP server on Manufact
+
+The server deploys from this GitHub repository with the Manufact GitHub App.
+
+- Current endpoint: `https://keen-wave-4xpwv.run.mcp-use.com/mcp`
 - Build: `npm run build` (`mcp-use build`: server plus the `signing-status` View)
 - Start: `npm start` (`mcp-use start`, `NODE_ENV=production`)
-
-## First deployment
 
 ```bash
 npx mcp-use login
 npx mcp-use deploy --name documenso-mcp --env-file .env.production --yes
-npx mcp-use deployments get <deployment-id>
 npx mcp-use deployments logs <deployment-id> --build
 ```
 
-`.env.production` is git-ignored and holds:
+- `.env.production` is git-ignored and holds `DOCUMENSO_URL` (and optionally `DOCUMENSO_TIMEOUT_MS`).
+- **`MCP_URL` is set by Manufact.**
+- To change a variable later: `npx mcp-use servers env set <server-id> KEY=VALUE`, then `npx mcp-use deploy`.
+- Moving from v0.2.0: delete `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `CONNECTION_ENCRYPTION_KEY` from the server's environment. They are no longer read. The Supabase project and its `documenso_connections` table can be deleted.
 
-| Variable | Value |
-|---|---|
-| `DOCUMENSO_URL` | Public URL of the Documenso instance |
-| `DOCUMENSO_TIMEOUT_MS` | `15000` |
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (`sb_publishable_…`), never the secret key |
-| `CONNECTION_ENCRYPTION_KEY` | 32 random bytes, base64, **different from development** |
+## Documenso
 
-- **`MCP_URL` is set by Manufact** (the published OAuth resource is `https://keen-wave-4xpwv.run.mcp-use.com/mcp`). The server refuses to start in production without an `https://` `MCP_URL`.
-- The **EU region** needs a paid Manufact plan, so the free plan uses the default region.
-- To change a variable later: `npx mcp-use servers env set <server-id> KEY=VALUE --secret`, then `npx mcp-use deploy`.
+Run the fork like any self-hosted Documenso ([Documenso's self-hosting docs](https://docs.documenso.com/docs/self-hosting)), from the fork's branch with the OAuth server, then:
 
-## Supabase
+1. Set `NEXT_PRIVATE_OAUTH_RESOURCES` to this server's MCP endpoint.
+2. Apply the database migrations (`npm run prisma:migrate-deploy`).
+3. Check `https://<documenso>/.well-known/oauth-authorization-server` returns the metadata.
 
-- **Authentication → URL Configuration → Site URL:** `https://keen-wave-4xpwv.run.mcp-use.com`
-- **Authentication → OAuth Server → Authorization Path:** `/auth/consent`
-
-Supabase has one Site URL per project, so while it points at production, local sign-ins also land on the deployed consent page. A separate Supabase project for local development avoids this.
-
-## Documenso for the demo
-
-The deployed server reaches the local Documenso test instance through an ngrok tunnel:
-
-```bash
-ngrok http 3000 --host-header=rewrite
-```
-
-- `--host-header=rewrite` is required because Documenso's Vite dev server rejects unknown `Host` headers.
-- ngrok's free-plan browser warning does not affect server-to-server calls: Node `fetch` gets HTTP 200.
-- Tokens linked in development cannot be decrypted with the production key. The server treats them as "not connected" (logged as `{"event":"connection_undecryptable"}`), and users link a token again on the consent page.
+The fork is AGPL-3.0: users of a public instance must be able to get its source, which the public fork repository provides.
 
 ## Verifying a deployment
 
 ```bash
-./scripts/check-auth-wiring.sh https://keen-wave-4xpwv.run.mcp-use.com
+./scripts/check-auth-wiring.sh https://mcp.example.com
+node --env-file=.env.test.local scripts/check-oauth-flow.ts https://mcp.example.com
 ```
 
-Result on the first deployment: 12 PASS, 1 WARN (the known mcp-use `kid` issue), 0 FAIL. `documenso-health` through Manufact → ngrok → Documenso returned `status: ok`.
+The first needs no credentials. The second signs in with two test accounts on the deployed Documenso and runs the whole flow, including team isolation and revocation.
