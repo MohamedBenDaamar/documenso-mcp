@@ -6,6 +6,21 @@ Users connect in one click: the assistant opens Documenso, the user signs in, pi
 
 > **Status (v0.3.0):** read-only tools and the signing-status View, with Documenso OAuth. Tested in **Claude Code** and the mcp-use Inspector against a local stack, and end to end by [`scripts/check-oauth-flow.ts`](scripts/check-oauth-flow.ts) (20 checks). Claude and ChatGPT were last tested on v0.2.0, which used a different sign-in; they are next, once Documenso runs at a stable public URL. Drafting and sending come after. This is an independent project, not an official Documenso integration.
 
+## Live demo
+
+| | URL |
+|---|---|
+| **MCP server** (self-hosted with [`docker/Dockerfile`](docker/Dockerfile)) | `https://documenso-mcp.unheld.io/mcp` |
+| **Try it in the browser** | [mcp-use Inspector](https://documenso-mcp.unheld.io/mcp/inspector?server=https%3A%2F%2Fdocumenso-mcp.unheld.io%2Fmcp): click **Authenticate**, sign in to Documenso, allow, then run a tool |
+| **Documenso** with the OAuth server | https://documenso.unheld.io ([fork](https://github.com/MohamedBenDaamar/documenso), [OAUTH.md](https://github.com/MohamedBenDaamar/documenso/blob/feat/oauth-server/OAUTH.md)) |
+| Same MCP server on Manufact | `https://keen-wave-4xpwv.run.mcp-use.com/mcp` |
+
+Add either MCP URL as a custom connector in Claude or ChatGPT. Sign-ups on the demo Documenso are closed; demo accounts are available on request.
+
+| Documenso consent, live | Inspector after signing in, live |
+|---|---|
+| ![Consent page on documenso.unheld.io](docs/images/live-consent.png) | ![Inspector listing the demo team's documents](docs/images/live-inspector-list.png) |
+
 ## Tested in Claude Code
 
 One-click connection in a real Claude host, against the local stack: Documenso's consent page, then team-scoped tool calls, including a refused request for another team's document. More screenshots, the Inspector and revocation: [docs/host-testing.md](docs/host-testing.md).
@@ -88,7 +103,7 @@ node --env-file=.env.test.local scripts/check-oauth-flow.ts http://localhost:310
 - `check-oauth-flow.ts` runs the real flow with two ordinary Documenso accounts ([`.env.test.example`](.env.test.example)): discovery, registration, sign-in, consent, token exchange, every tool, team isolation between the two users, a token without the read scope (403), forged tokens (401), and revocation.
 - CI runs typecheck, tests and the build on every pull request.
 
-Deployment: [docs/deploy.md](docs/deploy.md).
+Deployment on Manufact or on your own server with Docker: [docs/deploy.md](docs/deploy.md).
 
 ## Security notes
 

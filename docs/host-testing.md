@@ -2,8 +2,23 @@
 
 | Version | Sign-in | Hosts tested |
 |---|---|---|
-| **v0.3.0** | Documenso OAuth ([ADR 0002](adr/0002-documenso-oauth.md)) | [Claude Code](#v030-claude-code-local) and the [mcp-use Inspector](#v030-mcp-use-inspector-local), against a local stack. Claude and ChatGPT follow once Documenso runs at a stable public URL. |
+| **v0.3.0** | Documenso OAuth ([ADR 0002](adr/0002-documenso-oauth.md)) | [Live deployment](#v030-live-deployment) (scripted checks and the Inspector); [Claude Code](#v030-claude-code-local) and the [mcp-use Inspector](#v030-mcp-use-inspector-local) against a local stack. |
 | v0.2.0 | Supabase plus a pasted Documenso API token | [Claude and ChatGPT](#v020-claude-and-chatgpt-deployed), against the Manufact deployment |
+
+## v0.3.0: live deployment
+
+Tested 2026-09-29 against both deployments, with Documenso at `https://documenso.unheld.io` and two demo accounts in different teams:
+
+| Check | `https://documenso-mcp.unheld.io` (VPS, Docker) | `https://keen-wave-4xpwv.run.mcp-use.com` (Manufact) |
+|---|---|---|
+| `check-auth-wiring.sh` | 12/12 | 12/12 |
+| `check-oauth-flow.ts` | 20/20 | 20/20 |
+
+The public Inspector, driven in a browser: **Authenticate** → Documenso sign-in → consent for "Acme Legal" → `list-envelopes` returned the team's three documents and none of the other team's.
+
+| Consent | Inspector |
+|---|---|
+| ![Live consent page](images/live-consent.png) | ![Live Inspector listing documents](images/live-inspector-list.png) |
 
 ## v0.3.0: Claude Code (local)
 

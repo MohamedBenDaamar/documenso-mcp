@@ -1,6 +1,6 @@
 # Deploying
 
-Two things are deployed: this MCP server, and the [Documenso fork](https://github.com/MohamedBenDaamar/documenso) it uses as its authorization server. Each must know the other's public URL.
+Two things are deployed: this MCP server (on [Manufact](#mcp-server-on-manufact) or [with Docker](#self-hosting-with-docker)), and the [Documenso fork](https://github.com/MohamedBenDaamar/documenso) it uses as its authorization server. Each must know the other's public URL.
 
 | Side | Setting | Value |
 |---|---|---|
@@ -32,6 +32,39 @@ npx mcp-use deployments logs <deployment-id> --build
 - **`MCP_URL` is set by Manufact.**
 - To change a variable later: `npx mcp-use servers env set <server-id> KEY=VALUE`, then `npx mcp-use deploy`.
 - Moving from v0.2.0: delete `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `CONNECTION_ENCRYPTION_KEY` from the server's environment. They are no longer read. The Supabase project and its `documenso_connections` table can be deleted.
+
+## Self-hosting with Docker
+
+[`docker/Dockerfile`](../docker/Dockerfile) builds a small production image (Node 24, non-root) that runs `mcp-use start --with-inspector` on port 3000:
+
+```bash
+docker build -f docker/Dockerfile -t documenso-mcp .
+docker run -p 127.0.0.1:3311:3000 \
+  -e DOCUMENSO_URL=https://sign.example.com \
+  -e MCP_URL=https://mcp.example.com \
+  documenso-mcp
+```
+
+Put it behind a TLS reverse proxy. MCP responses are streamed as server-sent events, so turn off response buffering and allow long-lived connections; for nginx:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3311;
+    proxy_http_version 1.1;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Connection        "";
+    proxy_buffering off;
+    proxy_read_timeout 3600s;
+}
+```
+
+Behind a proxy, open the Inspector with the public URL spelled out (`/mcp/inspector?server=https%3A%2F%2Fmcp.example.com%2Fmcp`). Without it, the Inspector builds the server address from the proxied request and tries plain `http://`.
+
+### The live demo
+
+`https://documenso-mcp.unheld.io` runs this way on a VPS, next to the Documenso fork at `https://documenso.unheld.io`: one Docker Compose project with three containers (Documenso, its Postgres, and this server), each bound to localhost, behind nginx and Cloudflare. Documenso's `NEXT_PRIVATE_OAUTH_RESOURCES` lists both MCP deployments, this one and Manufact's.
 
 ## Documenso
 
