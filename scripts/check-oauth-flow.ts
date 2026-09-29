@@ -230,8 +230,20 @@ async function connect(
   }
 
   pass(`${label}: exchanged the code for an access token (scope "${tokens.scope}")`);
+  createdGrants.push(tokens.refresh_token);
 
   return { accessToken: tokens.access_token as string, refreshToken: tokens.refresh_token as string, teamId };
+}
+
+/** Refresh tokens of every grant this run creates, revoked at the end so no test connection lingers. */
+const createdGrants: string[] = [];
+
+async function revoke(discovery: Discovery, clientId: string, refreshToken: string) {
+  return fetch(discovery.metadata.revocation_endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: clientId, token: refreshToken }),
+  });
 }
 
 async function main() {
@@ -308,13 +320,9 @@ async function main() {
 
   check(legacy.status === 401, "A Documenso API token is not accepted as an OAuth token (HTTP 401)", `HTTP ${legacy.status}`);
 
-  const revoke = await fetch(discovery.metadata.revocation_endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ client_id: clientId, token: userA.refreshToken }),
-  });
+  const revoked = await revoke(discovery, clientId, userA.refreshToken);
 
-  check(revoke.status === 200, "Revoked user A's grant at Documenso");
+  check(revoked.status === 200, "Revoked user A's grant at Documenso");
 
   // The MCP server may reuse its token check for up to 30 seconds, but Documenso refuses the token at once,
   // so the call fails either way: with HTTP 401, or with a reconnect message.
@@ -325,6 +333,9 @@ async function main() {
     "User A's token stops working right after revocation",
     `HTTP ${afterRevoke.status}`,
   );
+
+  // Leave nothing behind in the test accounts' Connected apps.
+  await Promise.all(createdGrants.map((refreshToken) => revoke(discovery, clientId, refreshToken)));
 
   console.log(failed ? "\nSome checks failed." : "\nAll checks passed.");
   process.exit(failed ? 1 : 0);

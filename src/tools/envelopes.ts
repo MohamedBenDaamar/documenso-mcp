@@ -223,7 +223,9 @@ export async function getEnvelopeStatus(
       signingStatus: recipient.signingStatus,
       readStatus: recipient.readStatus,
       sendStatus: recipient.sendStatus,
-      signedAt: recipient.signedAt,
+      // Documenso can hold a timestamp for recipients who have not signed (its seed data does), so a
+      // signing time is only reported once the recipient has actually signed.
+      signedAt: recipient.signingStatus === "SIGNED" ? recipient.signedAt : null,
       signingOrder: recipient.signingOrder,
     }));
 
