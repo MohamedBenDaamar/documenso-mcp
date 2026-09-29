@@ -2,8 +2,37 @@
 
 | Version | Sign-in | Hosts tested |
 |---|---|---|
-| **v0.3.0** | Documenso OAuth ([ADR 0002](adr/0002-documenso-oauth.md)) | [ChatGPT](#v030-chatgpt-live) and the [live deployment](#v030-live-deployment) (scripted checks and the Inspector); [Claude Code](#v030-claude-code-local) and the [mcp-use Inspector](#v030-mcp-use-inspector-local) against a local stack. |
+| **v0.3.0** | Documenso OAuth ([ADR 0002](adr/0002-documenso-oauth.md)) | [Claude](#v030-claude-live), [ChatGPT](#v030-chatgpt-live) and the [live deployment](#v030-live-deployment) (scripted checks and the Inspector); [Claude Code](#v030-claude-code-local) and the [mcp-use Inspector](#v030-mcp-use-inspector-local) against a local stack. |
 | v0.2.0 | Supabase plus a pasted Documenso API token | [Claude and ChatGPT](#v020-claude-and-chatgpt-deployed), against the Manufact deployment |
+
+## v0.3.0: Claude (live)
+
+Tested 2026-09-29 on claude.ai against `https://documenso-mcp.unheld.io/mcp`, after the masking fix. Connector added under **Settings → Connectors → Add custom connector**, with authentication **"Sign in now"**, and sign-in and consent on `documenso.unheld.io` as demo user Alex Martin (team Acme Legal).
+
+| 1. Connector setup | 2. Documenso's consent page |
+|---|---|
+| ![Adding the documenso-mcp URL as a custom connector in claude.ai](images/claude-ai-connector-setup.png) | ![Documenso asks to connect Claude for the Acme Legal team, read access only](images/claude-ai-consent.png) |
+
+Claude asks before each tool call:
+
+![Claude asks to run get-envelope-status with the envelope ID](images/claude-ai-tool-approval.png)
+
+The three prompts (`List my Documenso documents`, the Acme consulting agreement, and the other team's order form) in one message:
+
+| Signing-status View | List, and the other team's envelope refused |
+|---|---|
+| ![The signing-status View in Claude: names with masked emails](images/claude-ai-signing-status-view.png) | ![Claude lists three documents and reports that the other envelope does not exist or is not accessible](images/claude-ai-list-and-refusal.png) |
+
+### How the hosts registered
+
+Checked in Documenso's database after the tests:
+
+| Host | Registration | Client authentication | Redirect URI |
+|---|---|---|---|
+| Claude | Dynamic client registration | `client_secret_post` (confidential client) | `https://claude.ai/api/mcp/auth_callback` |
+| ChatGPT | Dynamic client registration | `none` (public client, PKCE only) | `https://chatgpt.com/connector_platform_oauth_redirect` |
+
+Claude.ai's default client option is "Use Claude's published identity" (client ID metadata documents). Documenso does not advertise that, so Claude fell back to dynamic registration without any change to the connector settings. Supporting both public and confidential clients at registration turned out to matter: the two hosts use one each.
 
 ## v0.3.0: ChatGPT (live)
 

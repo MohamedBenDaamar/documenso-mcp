@@ -4,7 +4,7 @@ A team-scoped [MCP](https://modelcontextprotocol.io) server for [Documenso](http
 
 Users connect in one click: the assistant opens Documenso, the user signs in, picks a team and approves. No API token to copy, no second account. That works because Documenso itself is the OAuth server, through an [OAuth 2.1 authorization server I added in a fork of Documenso](https://github.com/MohamedBenDaamar/documenso/blob/feat/oauth-server/OAUTH.md).
 
-> **Status (v0.3.0):** read-only tools and the signing-status View, with Documenso OAuth. Tested in **ChatGPT** against the [live demo](#live-demo), in **Claude Code** and the mcp-use Inspector, and end to end by [`scripts/check-oauth-flow.ts`](scripts/check-oauth-flow.ts) (20 checks) on both deployments. Drafting and sending come after. This is an independent project, not an official Documenso integration.
+> **Status (v0.3.0):** read-only tools and the signing-status View, with Documenso OAuth. Tested in **Claude** and **ChatGPT** against the [live demo](#live-demo), in Claude Code and the mcp-use Inspector, and end to end by [`scripts/check-oauth-flow.ts`](scripts/check-oauth-flow.ts) (20 checks) on both deployments. Drafting and sending come after. This is an independent project, not an official Documenso integration.
 
 ## Live demo
 
@@ -21,13 +21,13 @@ Add either MCP URL as a custom connector in Claude or ChatGPT. Sign-ups on the d
 |---|---|
 | ![Consent page on documenso.unheld.io](docs/images/live-consent.png) | ![Inspector listing the demo team's documents](docs/images/live-inspector-list.png) |
 
-## Tested in ChatGPT and Claude Code
+## Tested in Claude and ChatGPT
 
-One-click connection in real hosts: Documenso's consent page, then team-scoped tool calls, including a refused request for another team's document. ChatGPT against the live deployment, Claude Code against a local stack. All screenshots, the Inspector, revocation and what the tests found: [docs/host-testing.md](docs/host-testing.md).
+One-click connection in real hosts against the live deployment: Documenso's consent page, then team-scoped tool calls, including a refused request for another team's document. Also tested in Claude Code and the mcp-use Inspector. All screenshots, how each host registered, revocation and what the tests found: [docs/host-testing.md](docs/host-testing.md).
 
-| ChatGPT (live) | Claude Code |
+| Claude (live) | ChatGPT (live) |
 |---|---|
-| ![ChatGPT listing the demo team's documents](docs/images/chatgpt-v3-list-envelopes.png) | ![Claude Code listing documents and refused another team's envelope](docs/images/claude-code-conversation.png) |
+| ![The signing-status View in Claude](docs/images/claude-ai-signing-status-view.png) | ![ChatGPT listing the demo team's documents](docs/images/chatgpt-v3-list-envelopes.png) |
 
 ## Connecting
 
