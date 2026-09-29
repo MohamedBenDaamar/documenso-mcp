@@ -11,7 +11,7 @@ In v0.2.0, users signed in to this server through a separate Supabase account, t
 3. **Narrow onboarding.** Documenso only lets team admins and managers create API tokens, so ordinary members could not connect at all.
 4. **No permission boundary for writes.** Supabase's OAuth server only issues OpenID scopes. Adding send tools under the same grant would have widened what already-connected clients could do without asking the user again.
 
-ADR 0001 ruled out changing Documenso, because upstream does not accept external pull requests and has no OAuth server. That is still true, but a fork removes the obstacle: the OAuth server can live in [MohamedBenDaamar/documenso](https://github.com/MohamedBenDaamar/documenso) ([OAUTH.md](https://github.com/MohamedBenDaamar/documenso/blob/feat/oauth-server/OAUTH.md)).
+ADR 0001 ruled out changing Documenso, because upstream does not accept external pull requests and has no OAuth server. That is still true, but a fork removes the obstacle: the OAuth server can live in [MohamedBenDaamar/documenso](https://github.com/MohamedBenDaamar/documenso) ([OAUTH.md](https://github.com/MohamedBenDaamar/documenso/blob/main/OAUTH.md)).
 
 ## Decision
 

@@ -1,6 +1,6 @@
 # Authentication and team authorization
 
-Documenso is this server's OAuth authorization server. Users connect by signing in to Documenso and approving access for one team; this server never sees a password or stores a token. Why this design: [ADR 0002](adr/0002-documenso-oauth.md). The Documenso side: [OAUTH.md in the fork](https://github.com/MohamedBenDaamar/documenso/blob/feat/oauth-server/OAUTH.md).
+Documenso is this server's OAuth authorization server. Users connect by signing in to Documenso and approving access for one team; this server never sees a password or stores a token. Why this design: [ADR 0002](adr/0002-documenso-oauth.md). The Documenso side: [OAUTH.md in the fork](https://github.com/MohamedBenDaamar/documenso/blob/main/OAUTH.md).
 
 ## Flow
 

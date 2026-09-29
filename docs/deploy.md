@@ -68,7 +68,7 @@ Behind a proxy, open the Inspector with the public URL spelled out (`/mcp/inspec
 
 ## Documenso
 
-Run the fork like any self-hosted Documenso ([Documenso's self-hosting docs](https://docs.documenso.com/docs/self-hosting)), from the fork's branch with the OAuth server, then:
+Run the fork like any self-hosted Documenso ([Documenso's self-hosting docs](https://docs.documenso.com/docs/self-hosting)), from the fork's `main` branch, then:
 
 1. Set `NEXT_PRIVATE_OAUTH_RESOURCES` to this server's MCP endpoint.
 2. Apply the database migrations (`npm run prisma:migrate-deploy`).
