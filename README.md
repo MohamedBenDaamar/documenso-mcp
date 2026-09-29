@@ -2,7 +2,15 @@
 
 A team-scoped [MCP](https://modelcontextprotocol.io) server for [Documenso](https://github.com/documenso/documenso), built with [mcp-use](https://docs.mcp-use.com). It lets ChatGPT and Claude list, inspect, prepare and send Documenso envelopes for the caller's own team.
 
-> **Status: work in progress.** The read-only tools and sign-in are done; drafting and sending are next. This is an independent project, not an official Documenso integration. See [ADR 0001](docs/adr/0001-external-adapter.md) for why it is a separate adapter.
+> **Status:** the read-only tools, per-user sign-in and the signing-status View are deployed on Manufact and tested in **Claude and ChatGPT**. Drafting and sending are next. This is an independent project, not an official Documenso integration. See [ADR 0001](docs/adr/0001-external-adapter.md) for why it is a separate adapter.
+
+## Tested in Claude and ChatGPT
+
+The same deployed server (`https://keen-wave-4xpwv.run.mcp-use.com/mcp`), with real OAuth sessions. Each host lists only the signed-in user's team documents, renders the signing-status View, and is refused another team's envelope. Details, the server log and all screenshots: [docs/host-testing.md](docs/host-testing.md).
+
+| Claude | ChatGPT |
+|---|---|
+| ![Signing-status View in Claude](docs/images/claude-signing-status-view.png) | ![Signing-status View in ChatGPT](docs/images/chatgpt-signing-status-view.png) |
 
 ## Tools
 
@@ -56,7 +64,9 @@ npm test
 ```
 
 - `check-team-isolation.sh` checks Documenso's own team boundaries with two team API tokens.
-- `check-auth-wiring.sh` checks the running server's sign-in boundary over HTTP: public health tool, 401 for Documenso tools without a valid token, cross-site form posts blocked.
+- `check-auth-wiring.sh` checks the running server's sign-in boundary over HTTP: public health tool, 401 for Documenso tools without a valid token, cross-site form posts blocked. Pass a URL to check a deployment.
+
+Deployment: [docs/deploy.md](docs/deploy.md).
 
 ## Security notes
 
