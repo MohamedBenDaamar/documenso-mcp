@@ -2,7 +2,7 @@
 
 A team-scoped [MCP](https://modelcontextprotocol.io) server for [Documenso](https://github.com/documenso/documenso), built with [mcp-use](https://docs.mcp-use.com). It lets ChatGPT and Claude list and inspect Documenso documents for a team the user chose, and will prepare and send them.
 
-Users connect in one click: the assistant opens Documenso, the user signs in, picks a team and approves. No API token to copy, no second account. That works because Documenso itself is the OAuth server, through an [OAuth 2.1 authorization server I added in a fork of Documenso](https://github.com/MohamedBenDaamar/documenso/blob/feat/oauth-server/OAUTH.md).
+Users connect in one click: the assistant opens Documenso, the user signs in, picks a team and approves. No API token to copy, no second account. That works because Documenso itself is the OAuth server, through an [OAuth 2.1 authorization server I added in a fork of Documenso](https://github.com/MohamedBenDaamar/documenso/blob/main/OAUTH.md).
 
 > **Status (v0.3.0):** read-only tools and the signing-status View, with Documenso OAuth. Tested in **Claude** and **ChatGPT** against the [live demo](#live-demo), in Claude Code and the mcp-use Inspector, and end to end by [`scripts/check-oauth-flow.ts`](scripts/check-oauth-flow.ts) (20 checks) on both deployments. Drafting and sending come after. This is an independent project, not an official Documenso integration.
 
@@ -12,7 +12,7 @@ Users connect in one click: the assistant opens Documenso, the user signs in, pi
 |---|---|
 | **MCP server** (self-hosted with [`docker/Dockerfile`](docker/Dockerfile)) | `https://documenso-mcp.unheld.io/mcp` |
 | **Try it in the browser** | [mcp-use Inspector](https://documenso-mcp.unheld.io/mcp/inspector?server=https%3A%2F%2Fdocumenso-mcp.unheld.io%2Fmcp): click **Authenticate**, sign in to Documenso, allow, then run a tool |
-| **Documenso** with the OAuth server | https://documenso.unheld.io ([fork](https://github.com/MohamedBenDaamar/documenso), [OAUTH.md](https://github.com/MohamedBenDaamar/documenso/blob/feat/oauth-server/OAUTH.md)) |
+| **Documenso** with the OAuth server | https://documenso.unheld.io ([fork](https://github.com/MohamedBenDaamar/documenso), [OAUTH.md](https://github.com/MohamedBenDaamar/documenso/blob/main/OAUTH.md)) |
 | Same MCP server on Manufact | `https://keen-wave-4xpwv.run.mcp-use.com/mcp` |
 
 Add either MCP URL as a custom connector in Claude or ChatGPT. Sign-ups on the demo Documenso are closed; demo accounts are available on request.

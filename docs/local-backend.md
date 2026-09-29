@@ -1,6 +1,6 @@
 # Running Documenso locally as the test backend
 
-This server needs the [Documenso fork](https://github.com/MohamedBenDaamar/documenso) with the OAuth authorization server ([OAUTH.md](https://github.com/MohamedBenDaamar/documenso/blob/feat/oauth-server/OAUTH.md)). Stock Documenso has no OAuth server, so MCP clients could not sign in.
+This server needs the [Documenso fork](https://github.com/MohamedBenDaamar/documenso) with the OAuth authorization server ([OAUTH.md](https://github.com/MohamedBenDaamar/documenso/blob/main/OAUTH.md)). Stock Documenso has no OAuth server, so MCP clients could not sign in.
 
 These steps were first tested against upstream commit `a1d4bec` (2026-09-26), and the fork against upstream v2.19.0, on macOS with Docker 29.1.3.
 
@@ -9,7 +9,6 @@ These steps were first tested against upstream commit `a1d4bec` (2026-09-26), an
 ```bash
 git clone https://github.com/MohamedBenDaamar/documenso.git
 cd documenso
-git checkout feat/oauth-server   # until it is merged into the fork's main
 cp -n .env.example .env
 
 # Allow this MCP server as an OAuth resource. The OAuth server is off without it.
