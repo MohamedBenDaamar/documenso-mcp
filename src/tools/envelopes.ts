@@ -358,6 +358,12 @@ export function registerEnvelopeTools(server: AppServer, deps: EnvelopeToolDeps)
       inputSchema: GetEnvelopeStatusInputSchema,
       outputSchema: EnvelopeStatusOutputSchema,
       annotations: READ_ONLY,
+      // Hosts without MCP Apps support still get the full status in the text result.
+      view: {
+        name: "signing-status",
+        description: "Signing progress card: status, progress bar, each recipient's state and a refresh button.",
+        prefersBorder: true,
+      },
     },
     async (input, ctx) => getEnvelopeStatus(deps, sessionOf(ctx), input, ctx.signal),
   );
