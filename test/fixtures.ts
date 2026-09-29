@@ -1,11 +1,8 @@
-import type { ConnectionStore, DocumensoConnection, UserSession } from "../src/connections/store.js";
 import type { DocumensoClient } from "../src/documenso/client.js";
 
-export const USER_A: UserSession = { id: "11111111-1111-4111-8111-111111111111", accessToken: "supabase-access-a" };
-export const USER_B: UserSession = { id: "22222222-2222-4222-8222-222222222222", accessToken: "supabase-access-b" };
-
-export const TOKEN_A = "api_teamatoken00000";
-export const TOKEN_B = "api_teambtoken00000";
+// Documenso OAuth access tokens, one per user and team.
+export const TOKEN_A = "doa_teamAtoken0000000000000000000000000000";
+export const TOKEN_B = "doa_teamBtoken0000000000000000000000000000";
 
 // Shaped like a real GET /api/v2/envelope/{id} response, including the fields that must never reach the model.
 export const RECIPIENT_SIGNING_TOKEN = "SC_48aooSk2z-bsPOojz2";
@@ -80,30 +77,6 @@ export function envelopeFixture(overrides: Record<string, unknown> = {}) {
 
 export function findResponse(data: unknown[]) {
   return { data, count: data.length, currentPage: 1, perPage: 10, totalPages: 1 };
-}
-
-/** In-memory store keyed by user ID, recording calls. */
-export function memoryStore(initial: Record<string, string> = {}) {
-  const tokens = new Map(Object.entries(initial));
-  const calls: { op: string; userId: string }[] = [];
-
-  const store: ConnectionStore = {
-    async get(user) {
-      calls.push({ op: "get", userId: user.id });
-      const token = tokens.get(user.id);
-      return token ? ({ token, tokenHint: token.slice(-4), verifiedAt: "2026-09-29T10:00:00.000Z" } satisfies DocumensoConnection) : null;
-    },
-    async save(user, token) {
-      calls.push({ op: "save", userId: user.id });
-      tokens.set(user.id, token);
-    },
-    async remove(user) {
-      calls.push({ op: "remove", userId: user.id });
-      tokens.delete(user.id);
-    },
-  };
-
-  return { store, tokens, calls };
 }
 
 /** Documenso client double that answers per token, like Documenso's team-scoped API. */

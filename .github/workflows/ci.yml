@@ -21,3 +21,5 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      # Bundles the server and the signing-status View, which typecheck and tests do not exercise.
+      - run: npm run build

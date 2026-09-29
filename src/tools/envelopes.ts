@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import type { AppServer } from "../app-server.js";
-import { ConnectionStoreError, type ConnectionStore, type UserSession } from "../connections/store.js";
 import type { DocumensoClient } from "../documenso/client.js";
 import {
   actingRecipients,
@@ -16,9 +15,6 @@ import { DocumensoError } from "../documenso/errors.js";
 
 export type EnvelopeToolDeps = {
   client: DocumensoClient;
-  store: ConnectionStore;
-  /** Page where users connect or replace their Documenso team token. */
-  accountUrl: string;
 };
 
 type TextContent = { type: "text"; text: string };
@@ -139,42 +135,23 @@ function progressOf(envelope: Envelope) {
 }
 
 /**
- * Loads the caller's own Documenso token and runs `run` with it. Every failure becomes a fixed,
- * safe message: no Documenso or Supabase error text, and never the token.
+ * Runs `run` with the caller's Documenso access token: the verified bearer token of this request,
+ * issued by Documenso for the team the user chose. Every failure becomes a fixed, safe message:
+ * no Documenso error text, and never the token.
  */
 async function withDocumensoToken<T>(
-  deps: EnvelopeToolDeps,
-  user: UserSession | undefined,
+  accessToken: string | undefined,
   run: (token: string) => Promise<ToolResult<T>>,
 ): Promise<ToolResult<T>> {
-  if (!user) {
-    return errorResult("Sign in to use this tool.");
+  if (!accessToken) {
+    return errorResult("Connect Documenso to use this tool.");
   }
 
   try {
-    const connection = await deps.store.get(user);
-
-    if (!connection) {
-      return errorResult(
-        `No Documenso team is connected to this account yet. Connect one at ${deps.accountUrl}, then try again.`,
-      );
-    }
-
-    return await run(connection.token);
+    return await run(accessToken);
   } catch (error) {
-    if (error instanceof DocumensoError && error.kind === "unauthorized") {
-      return errorResult(
-        "Documenso rejected the saved team token. It may have been revoked or expired, or you may no longer be " +
-          `a member of that team. Connect a new token at ${deps.accountUrl}.`,
-      );
-    }
-
     if (error instanceof DocumensoError) {
       return errorResult(error.message);
-    }
-
-    if (error instanceof ConnectionStoreError) {
-      return errorResult(`${error.message} Try again, or reconnect at ${deps.accountUrl}.`);
     }
 
     return errorResult("Something went wrong while talking to Documenso.");
@@ -183,11 +160,11 @@ async function withDocumensoToken<T>(
 
 export async function listEnvelopes(
   deps: EnvelopeToolDeps,
-  user: UserSession | undefined,
+  accessToken: string | undefined,
   input: z.infer<typeof ListEnvelopesInputSchema>,
   signal?: AbortSignal,
 ): Promise<ToolResult<ListEnvelopesOutput>> {
-  return withDocumensoToken(deps, user, async (token) => {
+  return withDocumensoToken(accessToken, async (token) => {
     const result = await deps.client.request({
       path: findEnvelopesPath({ type: "DOCUMENT", ...input }),
       token,
@@ -226,11 +203,11 @@ export async function listEnvelopes(
 
 export async function getEnvelopeStatus(
   deps: EnvelopeToolDeps,
-  user: UserSession | undefined,
+  accessToken: string | undefined,
   input: z.infer<typeof GetEnvelopeStatusInputSchema>,
   signal?: AbortSignal,
 ): Promise<ToolResult<EnvelopeStatusOutput>> {
-  return withDocumensoToken(deps, user, async (token) => {
+  return withDocumensoToken(accessToken, async (token) => {
     const envelope = await deps.client.request({
       path: `/envelope/${encodeURIComponent(input.envelopeId)}`,
       token,
@@ -277,11 +254,11 @@ export async function getEnvelopeStatus(
 
 export async function listTemplates(
   deps: EnvelopeToolDeps,
-  user: UserSession | undefined,
+  accessToken: string | undefined,
   input: z.infer<typeof ListTemplatesInputSchema>,
   signal?: AbortSignal,
 ): Promise<ToolResult<ListTemplatesOutput>> {
-  return withDocumensoToken(deps, user, async (token) => {
+  return withDocumensoToken(accessToken, async (token) => {
     const result = await deps.client.request({
       path: findEnvelopesPath({ type: "TEMPLATE", ...input }),
       token,
@@ -320,11 +297,6 @@ export async function listTemplates(
   });
 }
 
-type AuthContext = { auth?: { user: { id: string }; accessToken: string }; signal: AbortSignal };
-
-function sessionOf(ctx: AuthContext): UserSession | undefined {
-  return ctx.auth ? { id: ctx.auth.user.id, accessToken: ctx.auth.accessToken } : undefined;
-}
 
 const READ_ONLY = {
   readOnlyHint: true,
@@ -339,13 +311,13 @@ export function registerEnvelopeTools(server: AppServer, deps: EnvelopeToolDeps)
       name: "list-envelopes",
       title: "List documents",
       description:
-        "List signing documents (envelopes) in the caller's connected Documenso team, newest first. " +
+        "List signing documents (envelopes) in the Documenso team the user connected, newest first. " +
         "Supports filtering by status and a text search, with pagination.",
       inputSchema: ListEnvelopesInputSchema,
       outputSchema: ListEnvelopesOutputSchema,
       annotations: READ_ONLY,
     },
-    async (input, ctx) => listEnvelopes(deps, sessionOf(ctx), input, ctx.signal),
+    async (input, ctx) => listEnvelopes(deps, ctx.auth.accessToken, input, ctx.signal),
   );
 
   const getEnvelopeStatusTool = server.tool(
@@ -353,7 +325,7 @@ export function registerEnvelopeTools(server: AppServer, deps: EnvelopeToolDeps)
       name: "get-envelope-status",
       title: "Get signing status",
       description:
-        "Show the signing progress of one envelope in the caller's connected Documenso team: status and, " +
+        "Show the signing progress of one envelope in the Documenso team the user connected: status and, " +
         "for each recipient, role and whether they have opened and signed. Email addresses are masked.",
       inputSchema: GetEnvelopeStatusInputSchema,
       outputSchema: EnvelopeStatusOutputSchema,
@@ -365,7 +337,7 @@ export function registerEnvelopeTools(server: AppServer, deps: EnvelopeToolDeps)
         prefersBorder: true,
       },
     },
-    async (input, ctx) => getEnvelopeStatus(deps, sessionOf(ctx), input, ctx.signal),
+    async (input, ctx) => getEnvelopeStatus(deps, ctx.auth.accessToken, input, ctx.signal),
   );
 
   const listTemplatesTool = server.tool(
@@ -373,13 +345,13 @@ export function registerEnvelopeTools(server: AppServer, deps: EnvelopeToolDeps)
       name: "list-templates",
       title: "List templates",
       description:
-        "List Documenso templates available to the caller's connected team, with the recipient roles each " +
+        "List Documenso templates available to the team the user connected, with the recipient roles each " +
         "template expects.",
       inputSchema: ListTemplatesInputSchema,
       outputSchema: ListTemplatesOutputSchema,
       annotations: READ_ONLY,
     },
-    async (input, ctx) => listTemplates(deps, sessionOf(ctx), input, ctx.signal),
+    async (input, ctx) => listTemplates(deps, ctx.auth.accessToken, input, ctx.signal),
   );
 
   return { listEnvelopesTool, getEnvelopeStatusTool, listTemplatesTool };

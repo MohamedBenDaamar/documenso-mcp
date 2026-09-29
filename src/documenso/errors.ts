@@ -7,7 +7,7 @@ export type DocumensoErrorKind =
   | "unexpected";
 
 const SAFE_MESSAGES: Record<DocumensoErrorKind, string> = {
-  unauthorized: "The Documenso connection is missing, expired or revoked. Reconnect your Documenso team.",
+  unauthorized: "Documenso refused this connection: it expired or was revoked. Reconnect Documenso in the assistant's connector settings.",
   not_found_or_forbidden: "That Documenso item does not exist or your team cannot access it.",
   invalid_request: "Documenso rejected the request as invalid.",
   rate_limited: "Documenso is rate limiting this team. Try again shortly.",
