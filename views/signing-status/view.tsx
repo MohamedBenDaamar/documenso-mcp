@@ -111,7 +111,7 @@ export default function SigningStatusView() {
                     </p>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400">
                       {roleLabel(recipient.role)}
-                      {recipient.name ? ` · ${recipient.email}` : ""}
+                      {recipient.name && recipient.name !== recipient.email ? ` · ${recipient.email}` : ""}
                       {signedAt ? ` · ${signedAt}` : ""}
                     </p>
                   </div>

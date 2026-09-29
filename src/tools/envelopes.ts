@@ -9,6 +9,7 @@ import {
   findEnvelopesPath,
   FindEnvelopesResponseSchema,
   maskEmail,
+  maskEmailsIn,
   type Envelope,
 } from "../documenso/envelopes.js";
 import { DocumensoError } from "../documenso/errors.js";
@@ -80,7 +81,7 @@ export const EnvelopeStatusOutputSchema = z.object({
   recipients: z.array(
     z.object({
       id: z.number().int(),
-      name: z.string(),
+      name: z.string().describe("Recipient name. Any email address in it is masked."),
       email: z.string().describe("Masked email address."),
       role: z.string(),
       signingStatus: z.string(),
@@ -217,7 +218,7 @@ export async function getEnvelopeStatus(
 
     const recipients = envelope.recipients.slice(0, MAX_RECIPIENTS).map((recipient) => ({
       id: recipient.id,
-      name: recipient.name,
+      name: maskEmailsIn(recipient.name),
       email: maskEmail(recipient.email),
       role: recipient.role,
       signingStatus: recipient.signingStatus,
@@ -277,7 +278,7 @@ export async function listTemplates(
         recipients: template.recipients.map((recipient) => ({
           id: recipient.id,
           role: recipient.role,
-          label: recipient.name,
+          label: maskEmailsIn(recipient.name),
         })),
       })),
       page: result.currentPage,
