@@ -1,0 +1,10 @@
+node_modules
+.mcp-use
+dist
+coverage
+.git
+.github
+.env
+.env.*
+docs/images
+*.log
