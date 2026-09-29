@@ -1,6 +1,6 @@
-import type { MCPServer } from "mcp-use";
 import { z } from "zod";
 
+import type { AppServer } from "../app-server.js";
 import type { DocumensoClient } from "../documenso/client.js";
 import { DocumensoError } from "../documenso/errors.js";
 
@@ -69,7 +69,7 @@ export function summarizeHealth(health: HealthOutput): string {
   );
 }
 
-export function registerHealthTool(server: MCPServer, options: HealthToolOptions) {
+export function registerHealthTool(server: AppServer, options: HealthToolOptions) {
   return server.tool(
     {
       name: "documenso-health",
@@ -79,6 +79,7 @@ export function registerHealthTool(server: MCPServer, options: HealthToolOptions
         "Does not require a Documenso connection and returns no team data.",
       inputSchema: z.object({}),
       outputSchema: HealthOutputSchema,
+      securitySchemes: [{ type: "noauth" }],
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
