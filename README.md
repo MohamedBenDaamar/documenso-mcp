@@ -10,9 +10,17 @@ A team-scoped [MCP](https://modelcontextprotocol.io) server for [Documenso](http
 |---|---|---|
 | `documenso-health` | Not required | Server version and Documenso reachability. No team data. |
 | `list-envelopes` | Required | The caller's team documents, filterable by status and text, paginated. |
-| `get-envelope-status` | Required | Signing progress of one envelope. Recipient emails are masked. |
+| `get-envelope-status` | Required | Signing progress of one envelope, with an interactive [signing-status View](#signing-status-view). Recipient emails are masked. |
 | `list-templates` | Required | Team templates and the recipient roles each expects. |
 | `prepare-from-template`, `preview-distribution`, `distribute-envelope` | Planned | Draft first; sending requires an explicit, single-use confirmation. |
+
+## Signing-status View
+
+In hosts that support MCP Apps, `get-envelope-status` renders a card with the status, a progress bar, what happens next, each recipient's state and a Refresh button. Refresh calls `get-envelope-status` again through the same signed-in, team-scoped path. The View changes nothing, and hosts without Views get the same information as text.
+
+![Signing-status View in the mcp-use Inspector](docs/images/signing-status-view-inspector.png)
+
+The View loads no external scripts, fonts, images or APIs, so it declares no extra CSP domains. Its bundle contains no server code (`views/signing-status/`).
 
 ## How access works
 
