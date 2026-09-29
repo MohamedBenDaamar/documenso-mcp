@@ -23,7 +23,11 @@ The signing-status View rendered in ChatGPT, and it showed each recipient's emai
 
 ![Before the fix: the recipient name line shows the full email address](images/chatgpt-v3-view-before-fix.png)
 
-The demo recipients' names were their email addresses (Documenso's seed data sets them that way), and names were passed through unmasked. People can type an email into the name field too, so this was a real gap. `get-envelope-status` and `list-templates` now mask any email address inside a name or role label, with tests (`test/masking.test.ts`). The demo recipients also got real names.
+The demo recipients' names were their email addresses (Documenso's seed data sets them that way), and names were passed through unmasked. People can type an email into the name field too, so this was a real gap. `get-envelope-status` and `list-templates` now mask any email address inside a name or role label, with tests (`test/masking.test.ts`), fixed in [#9](https://github.com/MohamedBenDaamar/documenso-mcp/pull/9). The demo recipients also got real names.
+
+After the fix, the same View on the live deployment (rendered by the public Inspector):
+
+![After the fix: recipient names with masked emails only](images/live-view-after-fix.png)
 
 ## v0.3.0: live deployment
 
