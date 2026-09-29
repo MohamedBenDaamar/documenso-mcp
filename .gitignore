@@ -1,7 +1,12 @@
 node_modules/
 dist/
+.mcp-use/
+.vite/
+coverage/
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
 *.log
+*.pem
 .DS_Store
