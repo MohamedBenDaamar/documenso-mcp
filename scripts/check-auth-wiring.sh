@@ -79,7 +79,7 @@ for forged_case in "${forged_cases[@]}"; do
   fi
 done
 
-# Known mcp-use 2.7.0 issue: when the JWKS has several keys of the same type (normal during key rotation),
+# Known mcp-use issue (2.7.0, 2.7.1, still in 2.7.2-canary.7): when the JWKS has several keys of the same type (normal during key rotation),
 # a token without `kid` makes jose throw JWKSMultipleMatchingKeys, which mcp-use does not classify as a
 # credential failure, so the request fails closed with 500 instead of 401.
 status="$(mcp -H "Authorization: Bearer $(b64url '{"alg":"ES256","typ":"JWT"}').$payload.c2ln" -d "$(tool_call list-envelopes)")"
